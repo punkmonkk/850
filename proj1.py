@@ -77,16 +77,16 @@ some_data.columns = train_X.columns
 some_step_values = train_y.iloc[:20]
 
 
-#for i in range(20):
-   # some_predictions = model1.predict(some_data.iloc[i].values.reshape(1, -1))
-  #  some_actual_values = some_step_values.iloc[i]
-   # print("Predictions:", some_predictions)
-   # print("Actual values:", some_actual_values)
+for i in range(20):
+    some_predictions = model1.predict(some_data.iloc[i].values.reshape(1, -1))
+    some_actual_values = some_step_values.iloc[i]
+    print("Predictions:", some_predictions)
+    print("Actual values:", some_actual_values)
 
-#model1_prediction = model1.predict(train_X)
+model1_prediction = model1.predict(train_X)
 from sklearn.metrics import mean_absolute_error
-#model1_train_mae = mean_absolute_error(model1_prediction, train_y)
-#print("Model 1 training MAE is: ", round(model1_train_mae,2))
+model1_train_mae = mean_absolute_error(model1_prediction, train_y)
+print("Model 1 training MAE is: ", round(model1_train_mae,2))
 
 
 from sklearn.ensemble import RandomForestRegressor
@@ -97,7 +97,41 @@ model2_train_mae = mean_absolute_error(model2_predictions, train_y)
 print("Model 2 training MAE is: ", round(model2_train_mae,2))
 
 
+for i in range(20):
+      some_predictions1 = model1.predict(some_data.iloc[i].values.reshape(1, -1))
+      some_predictions2 = model2.predict(some_data.iloc[i].values.reshape(1, -1))
+      some_actual_values = some_step_values.iloc[i]
+      print("Predictions Model 1:", some_predictions1)
+      print("Predictions Model 2:", some_predictions2)
+      print("Actual values:", some_actual_values)
 
+
+
+test_X = ['X','Y','Z']
+test_y = strat_test_set['Step']
+
+#model1_test_predictions = model1.predict(test_X)
+model2_test_predictions = model2.predict(test_X)
+#model1_test_mae = mean_absolute_error(model1_test_predictions, test_y)
+model2_test_mae = mean_absolute_error(model2_test_predictions, test_y)
+#print("Model 1 MAE is: ", round(model1_test_mae,2))
+print("Model 2 MAE is: ", round(model2_test_mae,2))
+
+
+
+test_y = strat_test_set['median_house_value']
+df_test_X = strat_test_set.drop(columns = ["median_house_value"])
+scaled_data_test = my_scaler.transform(df_test_X.iloc[:,0:-5])
+scaled_data_test_df = pd.DataFrame(scaled_data_test, columns=df_test_X.columns[0:-5])
+test_X = scaled_data_test_df.join(df_test_X.iloc[:,-5:])
+test_X["rooms_per_household"] = test_X["total_rooms"]/test_X["households"]
+test_X["bedrooms_per_room"] = test_X["total_bedrooms"]/test_X["total_rooms"]
+test_X["population_per_household"]=test_X["population"]/test_X["households"]
+test_X = test_X[new_order]
+test_X = test_X.drop(['longitude'], axis=1)
+test_X = test_X.drop(['total_bedrooms'], axis=1)
+test_X = test_X.drop(['population'], axis=1)
+test_X = test_X.drop(['households'], axis=1)
 
 
 
