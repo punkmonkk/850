@@ -1,137 +1,144 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.metrics import mean_absolute_error, confusion_matrix
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 import seaborn as sns
-from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report, accuracy_score
 
+#confsuion matrix definition so it can be called when needed
+def plot_confusion_matrix(y_true, y_pred, title="Confusion Matrix"):
+    matrix = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(10,7))
+    sns.heatmap(matrix, annot=True, cmap='Blues', fmt='g')
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title(title)
+    plt.show()
 
-
-df= pd.read_csv("data/proj1850.csv")
+# 1. Loading the data and display parameters
+df = pd.read_csv("data/proj1850.csv")
 print(df.head())
 print(df.info())
 print(df.describe())
 
+sns.pairplot(df, hue='Step', diag_kind='kde')
+plt.suptitle('Pairwise Plots of x, y, z colored by step', y=1.02)
+plt.show()
 
-print(df.isna().any(axis=0).sum()) #how many col have missing value
-print(df.isna().any(axis=1).sum()) #how many row have missing value 
+# 2. Correlation matrix heatmap
+correlation_matrix = df[["X", "Y", "Z", "Step"]].corr().abs()
+plt.figure(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=0, vmax=1)
+plt.title('Correlation Matrix Heatmap')
+plt.show()
 
+# 3. Splitting Data (with stratification)
+X = df[["X", "Y", "Z"]]
+y = df["Step"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=12, stratify=y)
 
-df=df.dropna()
-df=df.reset_index(drop=True)
-num_bins = int(np.ceil(1 + np.log2(len(df))))
+# 3.1. Feature Engineering: Creating Polynomial Features for X_train and X_test
+poly = PolynomialFeatures(degree=2, include_bias=False)
+X_train_poly = poly.fit_transform(X_train)
+X_test_poly = poly.transform(X_test)  # Use the same transformation for X_test
 
-#stratified sampling
-df["step_data"] = pd.cut(df["Step"],bins=[0., 3.0, 6.0, 9.0, 13.0, np.inf],labels=[1, 2, 3, 4, 5])
-split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-for train_index, test_index in split.split(df, df["step_data"]):
-    strat_train_set = df.loc[train_index].reset_index(drop=True)
-    strat_test_set = df.loc[test_index].reset_index(drop=True)
-strat_train_set = strat_train_set.drop(columns=["step_data"], axis = 1)
-strat_test_set = strat_test_set.drop(columns=["step_data"], axis = 1)
+# 3.2. Scaling the data (scale after feature engineering)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train_poly)
+X_test_scaled = scaler.transform(X_test_poly)
 
-#df["X_data"] = pd.cut(df["X"],bins=[0., 3.0, 6.0, 9.0, 13.0, np.inf],labels=[1, 2, 3, 4, 5])
-#split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-#for train_index, test_index in split.split(df, df["X_data"]):
-#    strat_train_set = df.loc[train_index].reset_index(drop=True)
-#    strat_test_set = df.loc[test_index].reset_index(drop=True)
-#strat_train_set = strat_train_set.drop(columns=["X_data"], axis = 1)
-#strat_test_set = strat_test_set.drop(columns=["X_data"], axis = 1)
+# 3.3. Feature Selection based on Importance using Random Forest
+rf = RandomForestClassifier(n_estimators=100, random_state=12)
+rf.fit(X_train_scaled, y_train)
 
-#df["Y_data"] = pd.cut(df["Y"],bins=[0., 3.0, 6.0, 9.0, 13.0, np.inf],labels=[1, 2, 3, 4, 5])
-#split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-#for train_index, test_index in split.split(df, df["Y_data"]):
- #   strat_train_set = df.loc[train_index].reset_index(drop=True)
- #   strat_test_set = df.loc[test_index].reset_index(drop=True)
-#strat_train_set = strat_train_set.drop(columns=["Y_data"], axis = 1)
-#strat_test_set = strat_test_set.drop(columns=["Y_data"], axis = 1)
+# Get feature importances
+importances = rf.feature_importances_
 
-#[df["Z_data"] = pd.cut(df["Z"],bins=[0., 3.0, 6.0, 9.0, 13.0, np.inf],labels=[1, 2, 3, 4, 5])
-#split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-#for train_index, test_index in split.split(df, df["Z_data"]):
- #   strat_train_set = df.loc[train_index].reset_index(drop=True)
- #   strat_test_set = df.loc[test_index].reset_index(drop=True)
-#strat_train_set = strat_train_set.drop(columns=["Z_data"], axis = 1)
-#strat_test_set = strat_test_set.drop(columns=["Z_data"], axis = 1)]
+# Create a DataFrame to store feature importances along with their names
+feature_names = poly.get_feature_names_out(input_features=["X", "Y", "Z"])
+feature_importances = pd.DataFrame({
+    'Feature': feature_names,
+    'Importance': importances
+})
 
-#from pandas.plotting import scatter_matrix 
-#attributes = ["X","Y","Z","Step"]
-#scatter_matrix(df[attributes],figsize=(12,8))
+# Sort features by importance in descending order
+feature_importances = feature_importances.sort_values(by='Importance', ascending=False)
 
-corr_matrix = df.corr()
-#plt.matshow(corr_matrix)
-sns.heatmap(corr_matrix);
+# Select the top 3 most important features
+top_features = feature_importances['Feature'][:3]
 
-train_y = strat_train_set['Step']
-df_X = strat_train_set.drop(columns = ["Step"])
+# Get the selected feature indices
+selected_feature_indices = [feature_names.tolist().index(feature) for feature in top_features]
 
-train_X = strat_train_set[['X','Y','Z']]
-df_Y = strat_train_set.drop(columns = ["X","Y","Z"])
+# Update X_train_selected and X_test_selected with selected features
+X_train_selected = X_train_scaled[:, selected_feature_indices]
+X_test_selected = X_test_scaled[:, selected_feature_indices]
 
-from sklearn.linear_model import LinearRegression
-model1 = LinearRegression()
-model1.fit(train_X, train_y)
+# 5. Training and Evaluating Models
 
-some_data = train_X.iloc[:20]
-some_data.columns = train_X.columns
-some_step_values = train_y.iloc[:20]
+# b. Decision Tree
+clf_tree = DecisionTreeClassifier(max_depth=10, criterion='entropy')
+clf_tree.fit(X_train, y_train)
+y_pred_tree = clf_tree.predict(X_test)
+mae_tree = mean_absolute_error(y_test, y_pred_tree)
+print("Decision Tree - MAE:", mae_tree)
+plot_confusion_matrix(y_test, y_pred_tree, "Decision Tree Confusion Matrix")
+print("Decision Tree Accuracy:", accuracy_score(y_test, y_pred_tree))
+print(classification_report(y_test, y_pred_tree))
 
+# c. Random Forest
+clf_rf = RandomForestClassifier(n_estimators=50, max_depth=10, random_state=12)
+clf_rf.fit(X_train, y_train)
+y_pred_rf = clf_rf.predict(X_test)
+mae_rf = mean_absolute_error(y_test, y_pred_rf)
+print("Random Forest - MAE:", mae_rf)
+plot_confusion_matrix(y_test, y_pred_rf, "Random Forest Confusion Matrix")
+print("Random Forest Accuracy:", accuracy_score(y_test, y_pred_rf))
+print(classification_report(y_test, y_pred_rf))
 
-for i in range(20):
-    some_predictions = model1.predict(some_data.iloc[i].values.reshape(1, -1))
-    some_actual_values = some_step_values.iloc[i]
-    print("Predictions:", some_predictions)
-    print("Actual values:", some_actual_values)
+# d. K-Nearest Neighbors
+clf_knn = KNeighborsClassifier(n_neighbors=7)
+clf_knn.fit(X_train, y_train)
+y_pred_knn = clf_knn.predict(X_test)
+mae_knn = mean_absolute_error(y_test, y_pred_knn)
+print("KNN - MAE:", mae_knn)
+plot_confusion_matrix(y_test, y_pred_knn, "KNN Confusion Matrix")
+print("KNN Accuracy:", accuracy_score(y_test, y_pred_knn))
+print(classification_report(y_test, y_pred_knn))
 
-model1_prediction = model1.predict(train_X)
-from sklearn.metrics import mean_absolute_error
-model1_train_mae = mean_absolute_error(model1_prediction, train_y)
-print("Model 1 training MAE is: ", round(model1_train_mae,2))
+# e. Support Vector Machine
+clf_svm = SVC(C=0.5, kernel='linear', random_state=12)
+clf_svm.fit(X_train, y_train)
+y_pred_svm = clf_svm.predict(X_test)
+mae_svm = mean_absolute_error(y_test, y_pred_svm)
+print("SVM - MAE:", mae_svm)
+plot_confusion_matrix(y_test, y_pred_svm, "SVM Confusion Matrix")
+print("SVM Accuracy:", accuracy_score(y_test, y_pred_svm))
+print(classification_report(y_test, y_pred_svm))
 
+# 6. Example Prediction
+position = [[9.375, 3.0625, 1.51]]
+position = np.array(position)
+scaled_position = scaler.transform(poly.transform(position))
+print("Predicted Step using Decision Tree:", clf_tree.predict(position)[0])
+print("Predicted Step using Random Forest:", clf_rf.predict(position)[0])
+print("Predicted Step using KNN:", clf_knn.predict(position)[0])
+print("Predicted Step using SVM:", clf_svm.predict(position)[0])
 
-from sklearn.ensemble import RandomForestRegressor
-model2 = RandomForestRegressor(n_estimators=30, random_state=42)
-model2.fit(train_X, train_y)
-model2_predictions = model2.predict(train_X)
-model2_train_mae = mean_absolute_error(model2_predictions, train_y)
-print("Model 2 training MAE is: ", round(model2_train_mae,2))
+sns.boxplot(x='Step', y='X', data=df)
+plt.show()
 
+sns.boxplot(x='Step', y='Y', data=df)
+plt.show()
 
-for i in range(20):
-      some_predictions1 = model1.predict(some_data.iloc[i].values.reshape(1, -1))
-      some_predictions2 = model2.predict(some_data.iloc[i].values.reshape(1, -1))
-      some_actual_values = some_step_values.iloc[i]
-      print("Predictions Model 1:", some_predictions1)
-      print("Predictions Model 2:", some_predictions2)
-      print("Actual values:", some_actual_values)
-
-
-
-test_X = ['X','Y','Z']
-test_y = strat_test_set['Step']
-
-#model1_test_predictions = model1.predict(test_X)
-model2_test_predictions = model2.predict(test_X)
-#model1_test_mae = mean_absolute_error(model1_test_predictions, test_y)
-model2_test_mae = mean_absolute_error(model2_test_predictions, test_y)
-#print("Model 1 MAE is: ", round(model1_test_mae,2))
-print("Model 2 MAE is: ", round(model2_test_mae,2))
-
-
-
-test_y = strat_test_set['median_house_value']
-df_test_X = strat_test_set.drop(columns = ["median_house_value"])
-scaled_data_test = my_scaler.transform(df_test_X.iloc[:,0:-5])
-scaled_data_test_df = pd.DataFrame(scaled_data_test, columns=df_test_X.columns[0:-5])
-test_X = scaled_data_test_df.join(df_test_X.iloc[:,-5:])
-test_X["rooms_per_household"] = test_X["total_rooms"]/test_X["households"]
-test_X["bedrooms_per_room"] = test_X["total_bedrooms"]/test_X["total_rooms"]
-test_X["population_per_household"]=test_X["population"]/test_X["households"]
-test_X = test_X[new_order]
-test_X = test_X.drop(['longitude'], axis=1)
-test_X = test_X.drop(['total_bedrooms'], axis=1)
-test_X = test_X.drop(['population'], axis=1)
-test_X = test_X.drop(['households'], axis=1)
+sns.boxplot(x='Step', y='Z', data=df)
+plt.show()
 
 
 
