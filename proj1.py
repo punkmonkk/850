@@ -10,6 +10,7 @@ from sklearn.ensemble import RandomForestClassifier
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, accuracy_score
+from joblib import dump
 
 #confsuion matrix definition so it can be called when needed
 def plot_confusion_matrix(y_true, y_pred, title="Confusion Matrix"):
@@ -85,6 +86,7 @@ X_test_selected = X_test_scaled[:, selected_feature_indices]
 # b. Decision Tree
 clf_tree = DecisionTreeClassifier(max_depth=10, criterion='entropy')
 clf_tree.fit(X_train, y_train)
+dump(clf_tree, 'decision_tree_model.joblib')
 y_pred_tree = clf_tree.predict(X_test)
 mae_tree = mean_absolute_error(y_test, y_pred_tree)
 print("Decision Tree - MAE:", mae_tree)
@@ -95,6 +97,7 @@ print(classification_report(y_test, y_pred_tree))
 # c. Random Forest
 clf_rf = RandomForestClassifier(n_estimators=50, max_depth=10, random_state=12)
 clf_rf.fit(X_train, y_train)
+dump(clf_rf, 'random_forest_model.joblib')
 y_pred_rf = clf_rf.predict(X_test)
 mae_rf = mean_absolute_error(y_test, y_pred_rf)
 print("Random Forest - MAE:", mae_rf)
@@ -105,6 +108,7 @@ print(classification_report(y_test, y_pred_rf))
 # d. K-Nearest Neighbors
 clf_knn = KNeighborsClassifier(n_neighbors=7)
 clf_knn.fit(X_train, y_train)
+dump(clf_knn, 'knn_model.joblib')  
 y_pred_knn = clf_knn.predict(X_test)
 mae_knn = mean_absolute_error(y_test, y_pred_knn)
 print("KNN - MAE:", mae_knn)
@@ -115,6 +119,7 @@ print(classification_report(y_test, y_pred_knn))
 # e. Support Vector Machine
 clf_svm = SVC(C=0.5, kernel='linear', random_state=12)
 clf_svm.fit(X_train, y_train)
+dump(clf_svm, 'svm_model.joblib')
 y_pred_svm = clf_svm.predict(X_test)
 mae_svm = mean_absolute_error(y_test, y_pred_svm)
 print("SVM - MAE:", mae_svm)
